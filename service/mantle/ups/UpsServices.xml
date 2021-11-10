@@ -5,21 +5,13 @@
         <implements service="mantle.shipment.CarrierServices.validate#ShippingPostalAddress"/>
         <actions>
             <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="postalAddress"/>
-            <if condition="postalAddress == null">
-                <return/>
-            </if>
-
-
+            <if condition="postalAddress == null"><return/></if>
             <!-- if PostalAddress has no shipGatewayAddressId look for one based on it (by ContactMech.replacesContactMechId) and if found return that) -->
             <if condition="!postalAddress.shipGatewayAddressId">
-                <if condition="partyId">
-                    <then>
+                <if condition="partyId"><then>
                         <entity-find entity-name="mantle.party.contact.PartyContactMechInfo" list="replacesPcmiList">
-                            <date-filter/>
-                            <econdition field-name="partyId"/>
-                            <econdition field-name="replacesContactMechId" from="contactMechId"/>
-                            <select-field field-name="contactMechId"/>
-                            <order-by field-name="contactMechId"/>
+                            <date-filter/><econdition field-name="partyId"/><econdition field-name="replacesContactMechId" from="contactMechId"/>
+                            <select-field field-name="contactMechId"/><order-by field-name="contactMechId"/>
                         </entity-find>
                         <if condition="replacesPcmiList">
                             <set field="contactMechId" from="replacesPcmiList[0].contactMechId"/>
@@ -28,53 +20,32 @@
                     </then>
                     <else-if condition="facilityId">
                         <entity-find entity-name="mantle.facility.FacilityContactMechInfo" list="replacesFcmiList">
-                            <date-filter/>
-                            <econdition field-name="facilityId"/>
-                            <econdition field-name="replacesContactMechId" from="contactMechId"/>
-                            <select-field field-name="contactMechId"/>
-                            <order-by field-name="contactMechId"/>
+                            <date-filter/><econdition field-name="facilityId"/><econdition field-name="replacesContactMechId" from="contactMechId"/><select-field field-name="contactMechId"/><order-by field-name="contactMechId"/>
                         </entity-find>
                         <if condition="replacesFcmiList">
-                            <set field="contactMechId" from="replacesFcmiList[0].contactMechId"/>
-                            <return/>
+                            <set field="contactMechId" from="replacesFcmiList[0].contactMechId"/><return/>
                         </if>
                     </else-if>
                 </if>
             </if>
-
             <set field="requestMap" from="[:]"/>
             <set field="path" value="AV"/>
-
             <entity-find-one entity-name="ups.ShippingGatewayUps" value-field="ups">
                 <field-map field-name="shippingGatewayConfigId"/>
             </entity-find-one>
-
-            <set field="accessRequestMap"
-                 from="[accessLicenseNumber: ups.accessLicenceNumber,userId:ups.userId,password:ups.password]"/>
-
-
-            <service-call name="mantle.ups.UpsServices.get#AddressMap" out-map="addrOut"
-                          in-map="[postalAddress:postalAddress, partyId:partyId]"/>
+            <set field="accessRequestMap" from="[accessLicenseNumber: ups.accessLicenceNumber,userId:ups.userId,password:ups.password]"/>
+            <service-call name="mantle.ups.UpsServices.get#AddressMap" out-map="addrOut" in-map="[postalAddress:postalAddress, partyId:partyId]"/>
             <set field="addressMap" from="addrOut.addressMap"/>
-
-            <set field="addressMap.validate" from="true"/>
-            <set field="addressMap.async" from="false"/>
-
-            <set field="addressValidationRequestMap" from="[[Request:[TransactionReference:[CustomerContext:'Your Customer Context'],
-        RequestAction:'AV'],Address:addressMap]]"/>
-            <set field="inMap"
-                 from="[AccessRequest:accessRequestMap,AddressValidationRequest:addressValidationRequestMap]"/>
-            <set field="requestMap"
-                 from="[shippingGatewayConfigId:shippingGatewayConfigId,path:path,requestMap:inMap]"/>
+            <set field="addressValidationRequestMap" from="[[Request:[TransactionReference:[CustomerContext:'Your Customer Context'],RequestAction:'AV'],Address:addressMap]]"/>
+            <set field="inMap" from="[AccessRequest:accessRequestMap,AddressValidationRequest:addressValidationRequestMap]"/>
+            <set field="requestMap" from="[shippingGatewayConfigId:shippingGatewayConfigId,path:path,requestMap:inMap]"/>
             <service-call name="mantle.ups.UpsServices.send#UpsRequest" in-map="requestMap"/>
         </actions>
-
     </service>
     <service verb="get" noun="AddressMap">
         <in-parameters>
             <parameter name="postalAddress" type="EntityValue" required="true"/>
             <parameter name="partyId"/>
-            <parameter name="isOrigin" type="Boolean" default="false"/>
             <parameter name="otherPartyId"/>
         </in-parameters>
         <out-parameters>
@@ -103,7 +74,6 @@
             <set field="countryCode" from="postalAddress.countryGeoId"/>
             <set field="addressMap" from="[city:city,countryCode:countryCode,
                 stateProvinceCode: stateProvinceCode, postalCode:postalCode]"/>
-
         </actions>
     </service>
 </services>
