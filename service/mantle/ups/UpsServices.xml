@@ -35,12 +35,88 @@
             </entity-find-one>
             <set field="accessRequestMap" from="[accessLicenseNumber: ups.accessLicenceNumber,userId:ups.userId,password:ups.password]"/>
             <service-call name="mantle.ups.UpsServices.get#AddressMap" out-map="addrOut" in-map="[postalAddress:postalAddress, partyId:partyId]"/>
+            <log message="===============${addrOut}========"/>
             <set field="addressMap" from="addrOut.addressMap"/>
             <set field="addressValidationRequestMap" from="[[Request:[TransactionReference:[CustomerContext:'Your Customer Context'],RequestAction:'AV'],Address:addressMap]]"/>
             <set field="inMap" from="[AccessRequest:accessRequestMap,AddressValidationRequest:addressValidationRequestMap]"/>
+
             <set field="requestMap" from="[shippingGatewayConfigId:shippingGatewayConfigId,path:path,requestMap:inMap]"/>
-            <service-call name="mantle.ups.UpsServices.send#UpsRequest" in-map="requestMap"/>
+
+            <service-call name="mantle.ups.UpsServices.send#UpsRequest" in-map="requestMap" out-map="responseMap"/>
+            <set field="responseStatusCode" from="responseMap.AddressValidationResponse.Response.ResponseStatusCode"/>
+            <set field="responseStatusDescription" from="responseMap.AddressValidationResponse.Response.ResponseStatusDescription"/>
+
+            <log message="=======Ups validate address ${contactMechId} complete? ${responseStatusCode} valid? ${responseStatusDescription}========"/>
+
+            <if condition="responseMap.AddressValidationResponse.Response.ResponseStatusCode==0">
+                <return error="true" message="${responseMap.AddressValidationResponse.Error?.ErrorDescription}"/>
+            </if>
+
+
+            <!-- <log level="warn" message="Ups validate address ${contactMechId} response: ${responseMap}"/> -->
+
+
+
+<!--            &lt;!&ndash; call update#PartyPostalAddress for cleansed address &ndash;&gt;-->
+<!--            <if condition="responseStatusCode &amp;&amp; (partyId || facilityId)">-->
+<!--                <set field="stateProvinceGeoId" from="postalAddress.stateProvinceGeoId"/>-->
+<!--                <if condition="postalAddress.countryGeoId &amp;&amp; responseMap.AddressValidationResult.Address.StateProvinceCode">-->
+<!--                    <entity-find entity-name="moqui.basic.GeoAssocAndToDetail" list="stateGeoList">-->
+<!--                        <econdition field-name="geoId" from="postalAddress.countryGeoId"/>-->
+<!--                        <econdition field-name="geoCodeAlpha2" from="responseMap.AddressValidationResult.Address.StateProvinceCode"/>-->
+<!--                    </entity-find>-->
+<!--                    <if condition="stateGeoList"><set field="stateProvinceGeoId" from="stateGeoList[0].toGeoId"/></if>-->
+<!--                </if>-->
+<!--                <set field="paInMap" from="[contactMechId:contactMechId,-->
+<!--                        city:responseMap.AddressValidationResult.Address.City, stateProvinceGeoId:stateProvinceGeoId,-->
+<!--                        postalCode:(responseMap.zip.contains('-') ? responseMap.zip.substring(0, responseMap.zip.indexOf('-')) : responseMap.zip),-->
+<!--                        postalCodeExt:(responseMap.zip.contains('-') ? responseMap.zip.substring(responseMap.zip.indexOf('-') + 1) : '')]"/>-->
+<!--                <if condition="facilityId">-->
+<!--                    <entity-find entity-name="mantle.facility.FacilityContactMech" list="origFcmList">-->
+<!--                        <date-filter/>-->
+<!--                        <econdition field-name="facilityId"/>-->
+<!--                        <econdition field-name="contactMechId" from="contactMechId"/>-->
+<!--                    </entity-find>-->
+<!--                    <if condition="origFcmList">-->
+<!--                        <service-call name="mantle.facility.ContactServices.update#FacilityPostalAddress" out-map="paOut"-->
+<!--                                      in-map="paInMap + [facilityId:facilityId, expireCurrent:true]"/>-->
+<!--                        <set field="contactMechId" from="paOut.contactMechId"/>-->
+<!--                        <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="postalAddress"/>-->
+<!--                    </if>-->
+<!--                </if>-->
+<!--                <if condition="partyId">-->
+<!--                    <entity-find entity-name="mantle.party.contact.PartyContactMech" list="origPcmList">-->
+<!--                        &lt;!&ndash; NOTE: do without <date-filter/>, allow if address has ever been associated with Party &ndash;&gt;-->
+<!--                        <econdition field-name="partyId"/><econdition field-name="contactMechId"/>-->
+<!--                    </entity-find>-->
+<!--                    <if condition="origPcmList">-->
+<!--                        <service-call name="mantle.party.ContactServices.update#PartyPostalAddress" out-map="paOut"-->
+<!--                                      in-map="paInMap + [partyId:partyId, expireCurrent:false, contactMechPurposeId:'PostalShippingDest']"/>-->
+<!--                        <set field="contactMechId" from="paOut.contactMechId"/>-->
+<!--                        <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="postalAddress"/>-->
+<!--                    </if>-->
+<!--                </if>-->
+<!--            </if>-->
+
+<!--            <log message="Ups validate address ${contactMechId} complete? ${responseStatusCode} valid? ${responseStatusDescription}"/>-->
+<!--            &lt;!&ndash; update contactMech (using latest contactMechId) &ndash;&gt;-->
+<!--            <entity-find-one entity-name="mantle.party.contact.ContactMech" value-field="contactMech"/>-->
+<!--            <if condition="responseMap.validation_results?.messages">-->
+<!--                <set field="validateMessage" value=""/>-->
+<!--                <iterate list="responseMap.validation_results.messages" entry="messageObj">-->
+<!--                    &lt;!&ndash; <log message="Shippo validate address ${contactMechId} complete? ${is_complete} valid? ${is_valid} trust ${trustLevelEnumId} message: ${messageObj}"/> &ndash;&gt;-->
+<!--                    <set field="validateMessage" value="${validateMessage}(${messageObj.source}:${messageObj.code}) ${messageObj.text} "/>-->
+<!--                </iterate>-->
+<!--                <if condition="validateMessage.length() &gt; 255"><set field="validateMessage" from="validateMessage.substring(0,255)"/></if>-->
+<!--                <set field="contactMech.validateMessage" from="validateMessage"/>-->
+<!--            </if>-->
+<!--            <entity-update value-field="contactMech"/>-->
+
+<!--            &lt;!&ndash; update postalAddress &ndash;&gt;-->
+<!--            <set field="postalAddress.shipGatewayAddressId" from="responseMap.object_id"/>-->
+<!--            <entity-update value-field="postalAddress"/>-->
         </actions>
+
     </service>
     <service verb="get" noun="AddressMap">
         <in-parameters>
@@ -76,4 +152,5 @@
                 stateProvinceCode: stateProvinceCode, postalCode:postalCode]"/>
         </actions>
     </service>
+
 </services>
