@@ -28,22 +28,24 @@
                     </else-if>
                 </if>
             </if>
-            <set field="requestMap" from="[:]"/>
-            <set field="path" value="AV"/>
+
+            <set field="path" value="rest/AV"/>
+            <set field="method" value="POST"/>
             <entity-find-one entity-name="ups.ShippingGatewayUps" value-field="ups">
                 <field-map field-name="shippingGatewayConfigId"/>
             </entity-find-one>
-            <set field="accessRequestMap" from="[accessLicenseNumber: ups.accessLicenceNumber,userId:ups.userId,password:ups.password]"/>
+            <set field="accessRequestMap" from="[AccessLicenseNumber: ups.accessLicenceNumber,UserId:ups.userId,Password:ups.password]"/>
 
             <service-call name="mantle.ups.UpsServices.get#AddressMap" out-map="addrOut" in-map="[postalAddress:postalAddress, partyId:partyId]"/>
 
-            <log message="===============${addrOut}========"/>
-            <set field="addressMap" from="addrOut.addressMap"/>
-            <set field="addressValidationRequestMap" from="[[Request:[TransactionReference:[CustomerContext:'Your Customer Context'],RequestAction:'AV'],Address:addressMap]]"/>
-            <set field="inMap" from="[AccessRequest:accessRequestMap,AddressValidationRequest:addressValidationRequestMap]"/>
-            <set field="requestMap" from="[shippingGatewayConfigId:shippingGatewayConfigId,path:path,requestMap:inMap]"/>
 
-            <service-call name="mantle.ups.UpsServices.send#UpsRequest" in-map="requestMap" out-map="responseMap"/>
+            <set field="addressMap" from="addrOut.addressMap"/>
+            <set field="addressValidationRequestMap" from="[Request:[TransactionReference:[CustomerContext:'Your Customer Context'],RequestAction:'AV'],Address:addressMap]"/>
+            <set field="inMap" from="[AccessRequest:accessRequestMap,AddressValidationRequest:addressValidationRequestMap]"/>
+
+            <service-call name="mantle.ups.UpsServices.send#UpsRequest" in-map="[shippingGatewayConfigId:shippingGatewayConfigId,path:path,methodType:method,requestMap:inMap]" out-map="responseMap"/>
+            <log message="If responseMap is empty return ${responseMap}"/>
+            <if condition="responseMap"><return/></if>
 
             <set field="responseStatusCode" from="responseMap.AddressValidationResponse.Response.ResponseStatusCode"/>
             <set field="responseStatusDescription" from="responseMap.AddressValidationResponse.Response ? responseMap.AddressValidationResponse.Response?.ResponseStatusDescription: Success"/>
@@ -155,8 +157,7 @@
                 <set field="postalCode" value="${postalAddress.postalCode}-${postalAddress.postalCodeExt}"/>
             </if>
             <set field="countryCode" from="postalAddress.countryGeoId"/>
-            <set field="addressMap" from="[city:city,countryCode:countryCode,
-                stateProvinceCode: stateProvinceCode, postalCode:postalCode]"/>
+            <set field="addressMap" from="[City:city,StateProvinceCode: stateProvinceCode, PostalCode:postalCode]"/>
         </actions>
     </service>
 
