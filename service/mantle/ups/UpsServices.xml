@@ -50,9 +50,7 @@
             <set field="responseStatusCode" from="responseMap.AddressValidationResponse.Response.ResponseStatusCode"/>
             <set field="responseStatusDescription" from="responseMap.AddressValidationResponse.Response ? responseMap.AddressValidationResponse.Response?.ResponseStatusDescription: Success"/>
             <set field="trustLevelEnumId" from="(responseStatusCode &amp;&amp; responseStatusDescription) ? 'CmtlValid' : (is_complete ? 'CmtlInvalid' : 'CmtlIncomplete')"/>
-
-            <log message="=======Ups validate address ${contactMechId} complete? ${responseStatusCode} valid? ${responseStatusDescription}========"/>
-
+            
             <entity-find-one entity-name="mantle.party.contact.ContactMech" value-field="origContactMech"/>
             <set field="origContactMech.trustLevelEnumId" from="trustLevelEnumId"/>
             <entity-update value-field="origContactMech"/>
