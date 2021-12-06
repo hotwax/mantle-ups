@@ -1,3 +1,2 @@
 # mantle-ups
-
-Mantle UPS shipping integrations
+Ups shipping gateway integration

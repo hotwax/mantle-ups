@@ -1,3 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <entities xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/entity-definition-2.1.xsd">
+    <entity entity-name="ShippingGatewayUps" package="ups">
+        <field name="shippingGatewayConfigId" type="id" is-pk="true"/>
+        <field name="accessLicenceNumber" type="text-medium" encrypt="true"><description>Ups accessLicenceNumber(licenceNumber)</description></field>
+        <field name="userId" type="text-medium" encrypt="true"><description>Ups userId (userName)</description></field>
+        <field name="password" type="text-medium" encrypt="true"><description>Ups password(password)</description></field>
+        <field name="shipperNumber" type="text-medium" encrypt="true"><description>Ups shipper Number(shipperNumber)</description></field>
+        <field name="connectUrl" type="text-medium"><description>Ups sandbox/production instance Url</description></field>
+        <seed-data>
+            <moqui.basic.Enumeration description="Shipping Gateway Ups" enumId="ShGtwyUps" enumTypeId="ShippingGatewayType"/>
+        </seed-data>
+    </entity>
 </entities>
