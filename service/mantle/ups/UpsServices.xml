@@ -1,49 +1,167 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <services xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
           xsi:noNamespaceSchemaLocation="http://moqui.org/xsd/service-definition-2.1.xsd">
-    <service verb="send" noun="UpsRequest">
+
+     <service verb="validate" noun="PostalAddress">
+        <implements service="mantle.shipment.CarrierServices.validate#ShippingPostalAddress"/>
+        <actions>
+            <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="postalAddress"/>
+            <if condition="postalAddress == null"><return/></if>
+            <!-- if PostalAddress has no shipGatewayAddressId look for one based on it (by ContactMech.replacesContactMechId) and if found return that) -->
+            <if condition="!postalAddress.shipGatewayAddressId">
+                <if condition="partyId"><then>
+                    <entity-find entity-name="mantle.party.contact.PartyContactMechInfo" list="replacesPcmiList">
+                        <date-filter/><econdition field-name="partyId"/><econdition field-name="replacesContactMechId" from="contactMechId"/>
+                        <select-field field-name="contactMechId"/><order-by field-name="contactMechId"/>
+                    </entity-find>
+                    <if condition="replacesPcmiList">
+                        <set field="contactMechId" from="replacesPcmiList[0].contactMechId"/>
+                        <return/>
+                    </if>
+                </then>
+                    <else-if condition="facilityId">
+                        <entity-find entity-name="mantle.facility.FacilityContactMechInfo" list="replacesFcmiList">
+                            <date-filter/><econdition field-name="facilityId"/><econdition field-name="replacesContactMechId" from="contactMechId"/><select-field field-name="contactMechId"/><order-by field-name="contactMechId"/>
+                        </entity-find>
+                        <if condition="replacesFcmiList">
+                            <set field="contactMechId" from="replacesFcmiList[0].contactMechId"/><return/>
+                        </if>
+                    </else-if>
+                </if>
+            </if>
+
+            <set field="path" value="rest/AV"/>
+            <set field="method" value="POST"/>
+            <entity-find-one entity-name="ups.ShippingGatewayUps" value-field="ups">
+                <field-map field-name="shippingGatewayConfigId"/>
+            </entity-find-one>
+            <set field="accessRequestMap" from="[AccessLicenseNumber: ups.accessLicenceNumber,UserId:ups.userId,Password:ups.password]"/>
+
+            <service-call name="mantle.ups.UpsServices.get#AddressMap" out-map="addrOut" in-map="[postalAddress:postalAddress, partyId:partyId]"/>
+
+            <set field="addressMap" from="addrOut.addressMap"/>
+            <set field="addressValidationRequestMap" from="[Request:[TransactionReference:[CustomerContext:'Your Customer Context'],RequestAction:'AV'],Address:addressMap]"/>
+            <set field="inMap" from="[AccessRequest:accessRequestMap,AddressValidationRequest:addressValidationRequestMap]"/>
+
+            <service-call name="mantle.ups.UpsServices.send#UpsRequest" in-map="[shippingGatewayConfigId:shippingGatewayConfigId,path:path,methodType:method,requestMap:inMap]" out-map="addrValidationResponseOut"/>
+            <if condition="responseMap"><return/></if>
+
+            <set field="responseStatusCode" from="addrValidationResponseOut.responseMap.AddressValidationResponse.Response.ResponseStatusCode"/>
+            <set field="responseStatusDescription" from="addrValidationResponseOut.responseMap.AddressValidationResponse.Response ? addrValidationResponseOut.responseMap.AddressValidationResponse.Response?.ResponseStatusDescription: Success"/>
+            <set field="trustLevelEnumId" from="(responseStatusCode &amp;&amp; responseStatusDescription) ? 'CmtlValid' : (is_complete ? 'CmtlInvalid' : 'CmtlIncomplete')"/>
+
+            <entity-find-one entity-name="mantle.party.contact.ContactMech" value-field="origContactMech"/>
+            <set field="origContactMech.trustLevelEnumId" from="trustLevelEnumId"/>
+            <entity-update value-field="origContactMech"/>
+
+            <!-- Final cleansed address map which has max quality -->
+            
+            <!--If the quality is same for different addresses then right now it is giving the first map of the list-->
+            <!--TODO: mail is already sent on uoltects@ups.com to solve this query-->
+            
+            <set field="responseAddressMap" from="[:]"/>
+            <if condition="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult instanceof List">
+                <set field="maxQuality" value="0"/>
+                <iterate list="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult" entry="validationResult">
+                    <set field="quality" from="validationResult.Quality"/>
+                    <if condition="quality &gt; maxQuality"><set field="maxQuality" from="quality"/> <set field="responseAddressMap" from="validationResult"/></if>
+                </iterate>
+            </if>
+            <else><set field="responseAddressMap" from="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult"/></else>
+
+
+            <!-- call update#PartyPostalAddress for cleansed address -->
+            <if condition="responseStatusCode &amp;&amp; (partyId || facilityId)">
+                <set field="stateProvinceGeoId" from="postalAddress.stateProvinceGeoId"/>
+                <if condition="postalAddress.countryGeoId &amp;&amp; responseAddressMap.StateProvinceCode">
+                    <entity-find entity-name="moqui.basic.GeoAssocAndToDetail" list="stateGeoList">
+                        <econdition field-name="geoId" from="postalAddress.countryGeoId"/>
+                        <econdition field-name="geoCodeAlpha2" from="responseAddressMap.StateProvinceCode"/>
+                    </entity-find>
+                    <if condition="stateGeoList"><set field="stateProvinceGeoId" from="stateGeoList[0].toGeoId"/></if>
+                </if>
+
+                <set field="postalCodeLowEnd" from="responseAddressMap.PostalCodeLowEnd"/>
+                <set field="postalCodeHighEnd" from="responseAddressMap.PostalCodeHighEnd"/>
+
+                <set field="paInMap" from="[contactMechId:contactMechId,
+                        city:responseAddressMap.City, stateProvinceGeoId:stateProvinceGeoId,
+                        postalCode:(postalCodeLowEnd.contains('-') ? postalCodeLowEnd.substring(0, postalCodeLowEnd.indexOf('-')) : postalCodeLowEnd),
+                        postalCodeExt:(postalCodeHighEnd.contains('-') ? postalCodeHighEnd.substring(postalCodeHighEnd.indexOf('-') + 1) : postalCodeHighEnd)]"/>
+
+
+                <if condition="facilityId">
+                    <entity-find entity-name="mantle.facility.FacilityContactMech" list="origFcmList">
+                        <date-filter/>
+                        <econdition field-name="facilityId"/>
+                        <econdition field-name="contactMechId" from="contactMechId"/>
+                    </entity-find>
+                    <if condition="origFcmList">
+                        <service-call name="mantle.facility.ContactServices.update#FacilityPostalAddress" out-map="paOut"
+                                      in-map="paInMap + [facilityId:facilityId, expireCurrent:true]"/>
+                        <set field="contactMechId" from="paOut.contactMechId"/>
+                        <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="postalAddress"/>
+                    </if>
+                </if>
+                <if condition="partyId">
+                    <entity-find entity-name="mantle.party.contact.PartyContactMech" list="origPcmList">
+                        <!-- NOTE: do without <date-filter/>, allow if address has ever been associated with Party -->
+                        <econdition field-name="partyId"/><econdition field-name="contactMechId"/>
+                    </entity-find>
+                    <if condition="origPcmList">
+                        <service-call name="mantle.party.ContactServices.update#PartyPostalAddress" out-map="paOut"
+                                      in-map="paInMap + [partyId:partyId, expireCurrent:false, contactMechPurposeId:'PostalShippingDest']"/>
+                        <set field="contactMechId" from="paOut.contactMechId"/>
+                        <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="postalAddress"/>
+                    </if>
+                </if>
+            </if>
+
+            <log message="Ups validate address ${contactMechId} complete? ${responseStatusCode} valid? ${responseStatusDescription} trust ${trustLevelEnumId}}"/>
+            <!-- update contactMech (using latest contactMechId) -->
+            <entity-find-one entity-name="mantle.party.contact.ContactMech" value-field="contactMech"/>
+            <set field="contactMech.trustLevelEnumId" from="trustLevelEnumId"/>
+            <entity-update value-field="contactMech"/>
+
+            <!-- update postalAddress -->
+            <!--TODO : EXPLORE HOW CAN WE GET OBJECT_ID THROUGH THE RESPONSE MAP OF UPS ADDRESS VALIDATION -->
+            <!--<set field="postalAddress.shipGatewayAddressId" from="responseMap.object_id"/>-->
+            <entity-update value-field="postalAddress"/>
+        </actions>
+
+    </service>
+
+    <service verb="get" noun="AddressMap">
         <in-parameters>
-            <parameter name="shippingGatewayConfigId" required="true"/>
-            <parameter name="path" required="true"/>
-            <parameter name="methodType" required="true"/>
-            <parameter name="requestMap" type="Map" required="true"/>
+            <parameter name="postalAddress" type="EntityValue" required="true"/>
+            <parameter name="partyId"/>
+            <parameter name="otherPartyId"/>
         </in-parameters>
         <out-parameters>
-            <parameter name="responseMap" type="Map" required="true"/>
+            <parameter name="addressMap" type="Map"/>
         </out-parameters>
         <actions>
-            <entity-find-one entity-name="ups.ShippingGatewayUps" value-field="upsShippingConfig" cache="true"/>
-            <if condition="upsShippingConfig == null || !(upsShippingConfig.userId || upsShippingConfig.password)">
-                <log message="No shipping configuration found for upsShippingConfigId ${upsShippingConfigId} "/>
-                <return type="warning" error="true"
-                        message="No shipping configuration found for upsShippingConfigId ${upsShippingConfigId}"/>
+            <set field="contactMechId" from="postalAddress.contactMechId"/>
+            <if condition="!partyId">
+                <!-- try to find from related Party -->
+                <entity-find entity-name="mantle.party.contact.PartyContactMech" list="pcmList">
+                    <econdition field-name="contactMechId"/>
+                    <select-field field-name="partyId"/>
+                </entity-find>
+                <set field="partyIds" from="new HashSet(pcmList*.partyId)"/>
+                <!-- only if there is only one Party associated with the address -->
+                <if condition="partyIds.size() == 1">
+                    <set field="partyId" from="pcmList[0].partyId"/>
+                </if>
             </if>
-            <set field="responseMap" from="[:]"/>
-            <script><![CDATA[
-                  import org.moqui.util.RestClient;
-                  import groovy.json.JsonSlurper;
-
-                  def connectUrl = upsShippingConfig.connectUrl;
-                  if (!connectUrl.endsWith("/")) {
-                    connectUrl+="/";
-                    }
-                 connectUrl = connectUrl + path;
-                 RestClient restClient = ec.service.rest()
-                 restClient.method(methodType)
-                 restClient.uri(connectUrl)
-                 .basicAuth(upsShippingConfig.userId, upsShippingConfig.password)
-                 restClient.contentType("application/json")
-                 restClient.jsonObject(requestMap)
-                 RestClient.RestResponse restResponse = restClient.call()
-                 if (restResponse.statusCode < 200 || restResponse.statusCode > 300) {
-                    String errMsg = restResponse.text()
-                        ec.logger.error("Ups error response (${restResponse.statusCode}): ${errMsg}")
-                        ec.message.addMessage("Ups API error")
-                        ec.message.addMessage(errMsg)
-                        return
-                    }
-                responseMap = restResponse.jsonObject()
-            ]]></script>
+            <set field="city" from="postalAddress.city"/>
+            <set field="stateProvinceCode" from="postalAddress.stateProvinceGeo"/>
+            <set field="postalCode" from="postalAddress.postalCode"/>
+            <if condition="postalAddress.postalCodeExt &amp;&amp; postalAddress.postalCode != postalAddress.postalCodeExt">
+                <set field="postalCode" value="${postalAddress.postalCode}-${postalAddress.postalCodeExt}"/>
+            </if>
+            <set field="countryCode" from="postalAddress.countryGeoId"/>
+            <set field="addressMap" from="[City:city,StateProvinceCode: stateProvinceCode, PostalCode:postalCode]"/>
         </actions>
     </service>
 

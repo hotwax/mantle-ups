@@ -1,4 +1,3 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <entity-facade-xml type="demo">
-    <ups.ShippingGatewayUps shippingGatewayConfigId="UpsDemo" accessLicenceNumber="" userId="" password="" shipperNumber="" connectUrl="https://wwwcie.ups.com/"/>
 </entity-facade-xml>
