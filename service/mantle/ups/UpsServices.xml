@@ -35,16 +35,18 @@
             <entity-find-one entity-name="ups.ShippingGatewayUps" value-field="ups">
                 <field-map field-name="shippingGatewayConfigId"/>
             </entity-find-one>
-            <set field="accessRequestMap" from="[AccessLicenseNumber: ups.accessLicenceNumber,UserId:ups.userId,Password:ups.password]"/>
+            <set field="accessRequestMap" from="[AccessLicenseNumber:ups.accessLicenceNumber, UserId:ups.userId, Password:ups.password]"/>
 
+            <!-- Preparing address map by calling get#AddressMap service-->
             <service-call name="mantle.ups.UpsServices.get#AddressMap" out-map="addrOut" in-map="[postalAddress:postalAddress, partyId:partyId]"/>
 
             <set field="addressMap" from="addrOut.addressMap"/>
             <set field="addressValidationRequestMap" from="[Request:[TransactionReference:[CustomerContext:'Your Customer Context'],RequestAction:'AV'],Address:addressMap]"/>
             <set field="inMap" from="[AccessRequest:accessRequestMap,AddressValidationRequest:addressValidationRequestMap]"/>
 
+            <!-- Calling generic service for sending request  -->
             <service-call name="mantle.ups.UpsServices.send#UpsRequest" in-map="[shippingGatewayConfigId:shippingGatewayConfigId,path:path,methodType:method,requestMap:inMap]" out-map="addrValidationResponseOut"/>
-            <if condition="responseMap"><return/></if>
+            <if condition="addrValidationMap"><return/></if>
 
             <set field="responseStatusCode" from="addrValidationResponseOut.responseMap.AddressValidationResponse.Response.ResponseStatusCode"/>
             <set field="responseStatusDescription" from="addrValidationResponseOut.responseMap.AddressValidationResponse.Response ? addrValidationResponseOut.responseMap.AddressValidationResponse.Response?.ResponseStatusDescription: Success"/>
@@ -69,7 +71,6 @@
             </if>
             <else><set field="responseAddressMap" from="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult"/></else>
 
-
             <!-- call update#PartyPostalAddress for cleansed address -->
             <if condition="responseStatusCode &amp;&amp; (partyId || facilityId)">
                 <set field="stateProvinceGeoId" from="postalAddress.stateProvinceGeoId"/>
@@ -88,7 +89,6 @@
                         city:responseAddressMap.City, stateProvinceGeoId:stateProvinceGeoId,
                         postalCode:(postalCodeLowEnd.contains('-') ? postalCodeLowEnd.substring(0, postalCodeLowEnd.indexOf('-')) : postalCodeLowEnd),
                         postalCodeExt:(postalCodeHighEnd.contains('-') ? postalCodeHighEnd.substring(postalCodeHighEnd.indexOf('-') + 1) : postalCodeHighEnd)]"/>
-
 
                 <if condition="facilityId">
                     <entity-find entity-name="mantle.facility.FacilityContactMech" list="origFcmList">
