@@ -41,16 +41,16 @@
             <service-call name="mantle.ups.UpsServices.get#AddressMap" out-map="addrOut" in-map="[postalAddress:postalAddress, partyId:partyId]"/>
 
             <set field="addressMap" from="addrOut.addressMap"/>
-            <set field="addressValidationRequestMap" from="[Request:[TransactionReference:[CustomerContext:'Your Customer Context'],RequestAction:'AV'],Address:addressMap]"/>
-            <set field="inMap" from="[AccessRequest:accessRequestMap,AddressValidationRequest:addressValidationRequestMap]"/>
+            <set field="addressValidationRequestMap" from="[Request:[TransactionReference:[CustomerContext:'Ups Shipping Rate'], RequestAction:'AV'], Address:addressMap]"/>
+            <set field="inMap" from="[AccessRequest:accessRequestMap, AddressValidationRequest:addressValidationRequestMap]"/>
 
             <!-- Calling generic service for sending request  -->
-            <service-call name="mantle.ups.UpsServices.send#UpsRequest" in-map="[shippingGatewayConfigId:shippingGatewayConfigId,path:path,methodType:method,requestMap:inMap]" out-map="addrValidationResponseOut"/>
-            <if condition="addrValidationMap"><return/></if>
+            <service-call name="mantle.ups.UpsServices.send#UpsRequest" in-map="[shippingGatewayConfigId:shippingGatewayConfigId, path:path, methodType:method, requestMap:inMap]" out-map="addrValidationResponseOut"/>
+            <set field="responseStatusCode" from="'1'.equals(addrValidationResponseOut.responseMap.AddressValidationResponse.Response?.ResponseStatusCode)"/>
+            <set field="responseStatusDescription" from="addrValidationResponseOut.responseMap.AddressValidationResponse.Response ? addrValidationResponseOut.responseMap.AddressValidationResponse.Response?.ResponseStatusDescription: 'Success'"/>
 
-            <set field="responseStatusCode" from="addrValidationResponseOut.responseMap.AddressValidationResponse.Response.ResponseStatusCode"/>
-            <set field="responseStatusDescription" from="addrValidationResponseOut.responseMap.AddressValidationResponse.Response ? addrValidationResponseOut.responseMap.AddressValidationResponse.Response?.ResponseStatusDescription: Success"/>
-            <set field="trustLevelEnumId" from="(responseStatusCode &amp;&amp; responseStatusDescription) ? 'CmtlValid' : (is_complete ? 'CmtlInvalid' : 'CmtlIncomplete')"/>
+            <!--if responseStatusCode is 1 then only code is giving Success rest in all cases it is Failure: based on that set value of trustLevelEnumId -->
+            <set field="trustLevelEnumId" from="(responseStatusCode) ? 'CmtlValid' : 'CmtlInvalid'"/>
 
             <entity-find-one entity-name="mantle.party.contact.ContactMech" value-field="origContactMech"/>
             <set field="origContactMech.trustLevelEnumId" from="trustLevelEnumId"/>
@@ -58,35 +58,38 @@
 
             <!-- Final cleansed address map which has max quality -->
             
-            <!--If the quality is same for different addresses then right now it is giving the first map of the list-->
+            <!--If the quality is same for different addresses then for now the code is giving back the first map of the list-->
             <!--TODO: mail is already sent on uoltects@ups.com to solve this query-->
             
-            <set field="responseAddressMap" from="[:]"/>
-            <if condition="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult instanceof List">
+            <set field="validatedAddressMap" from="[:]"/>
+            <if condition="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult instanceof List"><then>
                 <set field="maxQuality" value="0"/>
                 <iterate list="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult" entry="validationResult">
                     <set field="quality" from="validationResult.Quality"/>
-                    <if condition="quality &gt; maxQuality"><set field="maxQuality" from="quality"/> <set field="responseAddressMap" from="validationResult"/></if>
+                    <if condition="quality &gt; maxQuality">
+                        <set field="maxQuality" from="quality"/>
+                        <set field="validatedAddressMap" from="validationResult"/>
+                    </if>
                 </iterate>
+                </then>
+                <else><set field="validatedAddressMap" from="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult"/></else>
             </if>
-            <else><set field="responseAddressMap" from="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult"/></else>
-
             <!-- call update#PartyPostalAddress for cleansed address -->
             <if condition="responseStatusCode &amp;&amp; (partyId || facilityId)">
                 <set field="stateProvinceGeoId" from="postalAddress.stateProvinceGeoId"/>
-                <if condition="postalAddress.countryGeoId &amp;&amp; responseAddressMap.StateProvinceCode">
+                <if condition="postalAddress.countryGeoId &amp;&amp; validatedAddressMap.StateProvinceCode">
                     <entity-find entity-name="moqui.basic.GeoAssocAndToDetail" list="stateGeoList">
                         <econdition field-name="geoId" from="postalAddress.countryGeoId"/>
-                        <econdition field-name="geoCodeAlpha2" from="responseAddressMap.StateProvinceCode"/>
+                        <econdition field-name="geoCodeAlpha2" from="validatedAddressMap.StateProvinceCode"/>
                     </entity-find>
                     <if condition="stateGeoList"><set field="stateProvinceGeoId" from="stateGeoList[0].toGeoId"/></if>
                 </if>
 
-                <set field="postalCodeLowEnd" from="responseAddressMap.PostalCodeLowEnd"/>
-                <set field="postalCodeHighEnd" from="responseAddressMap.PostalCodeHighEnd"/>
+                <set field="postalCodeLowEnd" from="validatedAddressMap.PostalCodeLowEnd"/>
+                <set field="postalCodeHighEnd" from="validatedAddressMap.PostalCodeHighEnd"/>
 
                 <set field="paInMap" from="[contactMechId:contactMechId,
-                        city:responseAddressMap.City, stateProvinceGeoId:stateProvinceGeoId,
+                        city:validatedAddressMap.City, stateProvinceGeoId:stateProvinceGeoId,
                         postalCode:(postalCodeLowEnd.contains('-') ? postalCodeLowEnd.substring(0, postalCodeLowEnd.indexOf('-')) : postalCodeLowEnd),
                         postalCodeExt:(postalCodeHighEnd.contains('-') ? postalCodeHighEnd.substring(postalCodeHighEnd.indexOf('-') + 1) : postalCodeHighEnd)]"/>
 
@@ -161,7 +164,7 @@
                 <set field="postalCode" value="${postalAddress.postalCode}-${postalAddress.postalCodeExt}"/>
             </if>
             <set field="countryCode" from="postalAddress.countryGeoId"/>
-            <set field="addressMap" from="[City:city,StateProvinceCode: stateProvinceCode, PostalCode:postalCode]"/>
+            <set field="addressMap" from="[City:city, StateProvinceCode: stateProvinceCode, PostalCode:postalCode]"/>
         </actions>
     </service>
 
