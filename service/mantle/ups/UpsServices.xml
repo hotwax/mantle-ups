@@ -41,7 +41,7 @@
             <service-call name="mantle.ups.UpsServices.get#AddressMap" out-map="addrOut" in-map="[postalAddress:postalAddress, partyId:partyId]"/>
 
             <set field="addressMap" from="addrOut.addressMap"/>
-            <set field="addressValidationRequestMap" from="[Request:[TransactionReference:[CustomerContext:'Ups Shipping Rate'], RequestAction:'AV'], Address:addressMap]"/>
+            <set field="addressValidationRequestMap" from="[Request:[TransactionReference:[CustomerContext:'Ups Shipping Address Validation'], RequestAction:'AV'], Address:addressMap]"/>
             <set field="inMap" from="[AccessRequest:accessRequestMap, AddressValidationRequest:addressValidationRequestMap]"/>
 
             <!-- Calling generic service for sending request  -->
