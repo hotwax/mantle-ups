@@ -54,8 +54,12 @@
 
             <log message="Ups validate address ${contactMechId} complete? ${responseStatusCode} valid? ${responseStatusDescription} trust ${trustLevelEnumId}}"/>
 
-            <!--TODO: this code is giving us only the status and description of the address that it is Success or Faliure -->
-            <!--Not updating any entity with the cleansed address based on the quality of response -->
+            <!--Note: currently service is validating the address only on the basis of the response description that it is either Success or Faliure -->
+            <!--TODO: Not updating ConatctMech related entity with the cleansed address based on the quality of response -->
+
+            <entity-find-one entity-name="mantle.party.contact.ContactMech" value-field="origContactMech"/>
+            <set field="origContactMech.trustLevelEnumId" from="trustLevelEnumId"/>
+            <entity-update value-field="origContactMech"/>
         </actions>
 
     </service>
@@ -91,6 +95,51 @@
             </if>
             <set field="countryCode" from="postalAddress.countryGeoId"/>
             <set field="addressMap" from="[City:city, StateProvinceCode: stateProvinceCode, PostalCode:postalCode]"/>
+        </actions>
+    </service>
+
+    <service verb="send" noun="UpsRequest">
+        <in-parameters>
+            <parameter name="shippingGatewayConfigId" required="true"/>
+            <parameter name="path" required="true"/>
+            <parameter name="methodType" required="true"/>
+            <parameter name="requestMap" type="Map" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="responseMap" type="Map" required="true"/>
+        </out-parameters>
+        <actions>
+            <entity-find-one entity-name="ups.ShippingGatewayUps" value-field="upsShippingConfig" cache="true"/>
+            <if condition="upsShippingConfig == null || !(upsShippingConfig.userId || upsShippingConfig.password)">
+                <log message="No shipping configuration found for upsShippingConfigId ${upsShippingConfigId} "/>
+                <return type="warning" error="true"
+                        message="No shipping configuration found for upsShippingConfigId ${upsShippingConfigId}"/>
+            </if>
+            <set field="responseMap" from="[:]"/>
+            <script><![CDATA[
+                  import org.moqui.util.RestClient;
+                  import groovy.json.JsonSlurper;
+                  def connectUrl = upsShippingConfig.connectUrl;
+                  if (!connectUrl.endsWith("/")) {
+                    connectUrl+="/";
+                    }
+                 connectUrl = connectUrl + path;
+                 RestClient restClient = ec.service.rest()
+                 restClient.method(methodType)
+                 restClient.uri(connectUrl)
+                 .basicAuth(upsShippingConfig.userId, upsShippingConfig.password)
+                 restClient.contentType("application/json")
+                 restClient.jsonObject(requestMap)
+                 RestClient.RestResponse restResponse = restClient.call()
+                 if (restResponse.statusCode < 200 || restResponse.statusCode > 300) {
+                    String errMsg = restResponse.text()
+                        ec.logger.error("Ups error response (${restResponse.statusCode}): ${errMsg}")
+                        ec.message.addMessage("Ups API error")
+                        ec.message.addMessage(errMsg)
+                        return
+                    }
+                responseMap = restResponse.jsonObject()
+            ]]></script>
         </actions>
     </service>
 
