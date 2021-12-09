@@ -52,84 +52,10 @@
             <!--if responseStatusCode is 1 then only code is giving Success rest in all cases it is Failure: based on that set value of trustLevelEnumId -->
             <set field="trustLevelEnumId" from="(responseStatusCode) ? 'CmtlValid' : 'CmtlInvalid'"/>
 
-            <entity-find-one entity-name="mantle.party.contact.ContactMech" value-field="origContactMech"/>
-            <set field="origContactMech.trustLevelEnumId" from="trustLevelEnumId"/>
-            <entity-update value-field="origContactMech"/>
-
-            <!-- Final cleansed address map which has max quality -->
-            
-            <!--If the quality is same for different addresses then for now the code is giving back the first map of the list-->
-            <!--TODO: mail is already sent on uoltects@ups.com to solve this query-->
-            
-            <set field="validatedAddressMap" from="[:]"/>
-            <if condition="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult instanceof List"><then>
-                <set field="maxQuality" value="0"/>
-                <iterate list="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult" entry="validationResult">
-                    <set field="quality" from="validationResult.Quality"/>
-                    <if condition="quality &gt; maxQuality">
-                        <set field="maxQuality" from="quality"/>
-                        <set field="validatedAddressMap" from="validationResult"/>
-                    </if>
-                </iterate>
-                </then>
-                <else><set field="validatedAddressMap" from="addrValidationResponseOut.responseMap.AddressValidationResponse.AddressValidationResult"/></else>
-            </if>
-            <!-- call update#PartyPostalAddress for cleansed address -->
-            <if condition="responseStatusCode &amp;&amp; (partyId || facilityId)">
-                <set field="stateProvinceGeoId" from="postalAddress.stateProvinceGeoId"/>
-                <if condition="postalAddress.countryGeoId &amp;&amp; validatedAddressMap.StateProvinceCode">
-                    <entity-find entity-name="moqui.basic.GeoAssocAndToDetail" list="stateGeoList">
-                        <econdition field-name="geoId" from="postalAddress.countryGeoId"/>
-                        <econdition field-name="geoCodeAlpha2" from="validatedAddressMap.StateProvinceCode"/>
-                    </entity-find>
-                    <if condition="stateGeoList"><set field="stateProvinceGeoId" from="stateGeoList[0].toGeoId"/></if>
-                </if>
-
-                <set field="postalCodeLowEnd" from="validatedAddressMap.PostalCodeLowEnd"/>
-                <set field="postalCodeHighEnd" from="validatedAddressMap.PostalCodeHighEnd"/>
-
-                <set field="paInMap" from="[contactMechId:contactMechId,
-                        city:validatedAddressMap.City, stateProvinceGeoId:stateProvinceGeoId,
-                        postalCode:(postalCodeLowEnd.contains('-') ? postalCodeLowEnd.substring(0, postalCodeLowEnd.indexOf('-')) : postalCodeLowEnd),
-                        postalCodeExt:(postalCodeHighEnd.contains('-') ? postalCodeHighEnd.substring(postalCodeHighEnd.indexOf('-') + 1) : postalCodeHighEnd)]"/>
-
-                <if condition="facilityId">
-                    <entity-find entity-name="mantle.facility.FacilityContactMech" list="origFcmList">
-                        <date-filter/>
-                        <econdition field-name="facilityId"/>
-                        <econdition field-name="contactMechId" from="contactMechId"/>
-                    </entity-find>
-                    <if condition="origFcmList">
-                        <service-call name="mantle.facility.ContactServices.update#FacilityPostalAddress" out-map="paOut"
-                                      in-map="paInMap + [facilityId:facilityId, expireCurrent:true]"/>
-                        <set field="contactMechId" from="paOut.contactMechId"/>
-                        <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="postalAddress"/>
-                    </if>
-                </if>
-                <if condition="partyId">
-                    <entity-find entity-name="mantle.party.contact.PartyContactMech" list="origPcmList">
-                        <!-- NOTE: do without <date-filter/>, allow if address has ever been associated with Party -->
-                        <econdition field-name="partyId"/><econdition field-name="contactMechId"/>
-                    </entity-find>
-                    <if condition="origPcmList">
-                        <service-call name="mantle.party.ContactServices.update#PartyPostalAddress" out-map="paOut"
-                                      in-map="paInMap + [partyId:partyId, expireCurrent:false, contactMechPurposeId:'PostalShippingDest']"/>
-                        <set field="contactMechId" from="paOut.contactMechId"/>
-                        <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="postalAddress"/>
-                    </if>
-                </if>
-            </if>
-
             <log message="Ups validate address ${contactMechId} complete? ${responseStatusCode} valid? ${responseStatusDescription} trust ${trustLevelEnumId}}"/>
-            <!-- update contactMech (using latest contactMechId) -->
-            <entity-find-one entity-name="mantle.party.contact.ContactMech" value-field="contactMech"/>
-            <set field="contactMech.trustLevelEnumId" from="trustLevelEnumId"/>
-            <entity-update value-field="contactMech"/>
 
-            <!-- update postalAddress -->
-            <!--TODO : EXPLORE HOW CAN WE GET OBJECT_ID THROUGH THE RESPONSE MAP OF UPS ADDRESS VALIDATION -->
-            <!--<set field="postalAddress.shipGatewayAddressId" from="responseMap.object_id"/>-->
-            <entity-update value-field="postalAddress"/>
+            <!--TODO: this code is giving us only the status and description of the address that it is Success or Faliure -->
+            <!--Not updating any entity with the cleansed address based on the quality of response -->
         </actions>
 
     </service>
