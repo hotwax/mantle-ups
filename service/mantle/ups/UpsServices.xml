@@ -46,13 +46,15 @@
 
             <!-- Calling generic service for sending request  -->
             <service-call name="mantle.ups.UpsServices.send#UpsRequest" in-map="[shippingGatewayConfigId:shippingGatewayConfigId, path:path, methodType:method, requestMap:inMap]" out-map="addrValidationResponseOut"/>
-            <set field="responseStatusCode" from="'1'.equals(addrValidationResponseOut.responseMap.AddressValidationResponse.Response?.ResponseStatusCode)"/>
-            <set field="responseStatusDescription" from="addrValidationResponseOut.responseMap.AddressValidationResponse.Response ? addrValidationResponseOut.responseMap.AddressValidationResponse.Response?.ResponseStatusDescription: 'Success'"/>
+            <set field="responseStatusCode" from="addrValidationResponseOut.responseMap.AddressValidationResponse.Response?.ResponseStatusCode"/>
+            <set field="responseStatusDescription" from="addrValidationResponseOut.responseMap.AddressValidationResponse.Response?.ResponseStatusDescription"/>
 
+            <!-- Check if the response is valid or not -->
+            <set field="is_valid" from="'1'.equals(addrValidationResponseOut.responseMap.AddressValidationResponse.Response?.ResponseStatusCode)"/>
             <!--if responseStatusCode is 1 then only code is giving Success rest in all cases it is Failure: based on that set value of trustLevelEnumId -->
-            <set field="trustLevelEnumId" from="(responseStatusCode) ? 'CmtlValid' : 'CmtlInvalid'"/>
+            <set field="trustLevelEnumId" from="(is_valid) ? 'CmtlValid' : 'CmtlInvalid'"/>
 
-            <log message="Ups validate address ${contactMechId} complete? ${responseStatusCode} valid? ${responseStatusDescription} trust ${trustLevelEnumId}}"/>
+            <log message="Ups validate address ${contactMechId} complete? ${responseStatusDescription} valid? ${responseStatusCode} trust ${trustLevelEnumId}}"/>
 
             <!--Note: currently service is validating the address only on the basis of the response description that it is either Success or Faliure -->
             <!--TODO: Not updating ConatctMech related entity with the cleansed address based on the quality of response -->
