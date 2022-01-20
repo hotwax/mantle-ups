@@ -47,4 +47,89 @@
         </actions>
     </service>
 
+    <service verb="get" noun="PackageMap">
+        <in-parameters>
+            <parameter name="carrierPartyId" required="true"/>
+            <parameter name="shipmentPackageSeqId" required="true"/>
+            <parameter name="shipmentBoxTypeId" required="true"/>
+            <parameter name="weightUomId"/>
+            <parameter name="weight" required="true"/>
+        </in-parameters>
+        <out-parameters>
+            <parameter name="packageMap" type="Map"/>
+        </out-parameters>
+        <actions>
+
+            <!-- Search for box details in ShipmentBoxType -->
+            <entity-find-one entity-name="mantle.shipment.ShipmentBoxType" value-field="boxType">
+                <field-map field-name="shipmentBoxTypeId"/>
+            </entity-find-one>
+            <if condition="!boxType">
+                <return message="Package ${shipmentPacakgeSeqId} has no box type, skipping Package"/>
+            </if>
+
+            <!--To retrieve packaging type code for the shipment box use CarrierShipmentBoxType-->
+            <entity-find-one entity-name="mantle.shipment.carrier.CarrierShipmentBoxType" value-field="carrierBoxType">
+                <field-map field-name="carrierPartyId"/>
+                <field-map field-name="shipmentBoxTypeId"/>
+            </entity-find-one>
+            <if condition="carrierBoxType == null">
+                <message>${shipmentBoxTypeId} has no packaging type code</message>
+            </if>
+            <set field="packagingTypeCode" from="carrierBoxType.packagingTypeCode"/>
+
+            <!--UPS accepts only IN and CM as dimension codes-->
+            <set field="dimUom" from="boxType.dimensionUomId?: 'LEN_in'"/>
+            <if condition="'LEN_cm'.equals(dimUom)">
+                <set field="dimCode" value="CM"/>
+                <else>
+                    <set field="dimCode" value="IN"/>
+                </else>
+            </if>
+
+            <if condition="!boxType.boxLength || !boxType.boxWidth || !boxType.boxHeight || dimUom == null">
+                <message>Box type ${boxType.shipmentBoxTypeId} is missing dimensions (length, width, height) or
+                    dimension UOM, skipping package
+                </message>
+            </if>
+            <!--Convert data type of length, width and height from decimal-number to String as UPS accepts them as String only-->
+            <set field="boxLengthStr" from="boxType.boxLength.toString()"/>
+            <set field="boxWidthStr" from="boxType.boxWidth.toString()"/>
+            <set field="boxHeightStr" from="boxType.boxHeight.toString()"/>
+
+            <!--get weightUomId from Uom -->
+            <entity-find-one entity-name="moqui.basic.Uom" value-field="weightUom">
+                <field-map field-name="uomId" from="weightUomId ?: 'WT_lb'"/>
+            </entity-find-one>
+
+            <!--valid values of weightUomId for UPS are only WT_lb, WT_oz and WT_kg in which WT_lb is default-->
+            <set field="wtUomId" from="weightUom.uomId"/>
+            <if condition="'WT_oz'.equals(wtUomId)">
+                <set field="weightUomCode" value="OZS"/>
+                <else>
+                    <if condition="'WT_kg'.equals(wtUomId)">
+                        <set field="weightUomCode" value="KGS"/>
+                    </if>
+                    <set field="weightUomCode" value="LBS"/>
+                </else>
+            </if>
+
+            <if condition="!weight || weightUom == null">
+                <message>Package ${shipmentPackageSeqId} box type ${boxType.shipmentBoxTypeId} is missing weight or
+                    weight UOM, skipping package
+                </message>
+            </if>
+            <set field="weight" from="weight ?: boxType.defaultGrossWeight"/>
+            <!--Convert data type of weight to String from BigDecimal -->
+            <set field="weightStr" from="weight.toString()"/>
+
+            <!--Preparing Package map of shipment-->
+            <set field="packagingType" from="[Code:packagingTypeCode, Description:boxType.description]"/>
+            <set field="dimensions" from="[UnitOfMeasurement:[Code:dimCode], Length:boxLengthStr, Width:boxWidthStr, Height:boxHeightStr]"/>
+            <set field="packageWeight" from="[UnitOfMeasurement:[Code:weightUomCode], Weight:weightStr]"/>
+            <set field="packageMap" from="[Packaging:packagingType, Dimensions:dimensions, PackageWeight:packageWeight]"/>
+
+        </actions>
+    </service>
+
 </services>
