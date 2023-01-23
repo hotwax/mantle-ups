@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<entity-facade-xml type="seed">
+    <moqui.basic.Enumeration description="UPS REST API USERNAME" enumId="SgoUPSUsername" enumTypeId="ShippingGatewayType"/>
+    <moqui.basic.Enumeration description="UPS REST API PASSWORD" enumId="SgoUPSPassword" enumTypeId="ShippingGatewayType"/>
+    <moqui.basic.Enumeration description="UPS SHIPPER NUMBER" enumId="SgoUPSShipperNumber" enumTypeId="ShippingGatewayType"/>
+    <moqui.basic.Enumeration description="UPS REST API" enumId="ShGtwyUPS" enumTypeId="ShippingGatewayType"/>
+    <moqui.basic.Enumeration description="UPS Gateway Options" enumId="EgUPSOption" enumTypeId="EnumGroup"/>
+    <moqui.basic.EnumGroupMember enumGroupEnumId="EgUPSOption" enumId="SgoUPSUsername"/>
+    <moqui.basic.EnumGroupMember enumGroupEnumId="EgUPSOption" enumId="SgoUPSPassword"/>
+    <moqui.basic.EnumGroupMember enumGroupEnumId="EgUPSOption" enumId="SgoUPSShipperNumber"/>
+</entity-facade-xml>

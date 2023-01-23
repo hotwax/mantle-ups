@@ -1,4 +1,53 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="UTF-8" ?>
 <entity-facade-xml type="demo">
-    <ups.ShippingGatewayUps shippingGatewayConfigId="UpsDemo" accessLicenceNumber="" userId="" password="" shipperNumber="" connectUrl="https://wwwcie.ups.com/"/>
+    <mantle.shipment.ShipmentBoxType shipmentBoxTypeId="UPS_Box_10kg" description="UPS Box 10kg"
+                                     dimensionUomId="LEN_in" boxLength="17.00" boxWidth="13.00" boxHeight="11.00" gatewayBoxId="25"/>
+    <mantle.shipment.ShipmentBoxType shipmentBoxTypeId="UPS_Box_25kg" description="UPS Box 25kg"
+                                     dimensionUomId="LEN_in" boxLength="19.00" boxWidth="17.00" boxHeight="14.00" gatewayBoxId="24"/>
+    <mantle.shipment.ShipmentBoxType shipmentBoxTypeId="UPS_Express_Box_Large" description="UPS Express Box Large"
+                                     dimensionUomId="LEN_in" boxLength="18.00" boxWidth="13.00" boxHeight="3.00" gatewayBoxId="2c"/>
+    <mantle.shipment.ShipmentBoxType shipmentBoxTypeId="UPS_Express_Box_Medium" description="UPS Express Box Medium"
+                                     dimensionUomId="LEN_in" boxLength="15.00" boxWidth="11.00" boxHeight="3.00" gatewayBoxId="2b"/>
+    <mantle.shipment.ShipmentBoxType shipmentBoxTypeId="UPS_Express_Box_Small" description="UPS Express Box Small"
+                                     dimensionUomId="LEN_in" boxLength="13.00" boxWidth="11.00" boxHeight="2.00" gatewayBoxId="2a"/>
+    <mantle.shipment.ShipmentBoxType shipmentBoxTypeId="UPS_Pak" description="UPS Pak"
+                                     dimensionUomId="LEN_in" boxLength="16.00" boxWidth="13.00" boxHeight="1.00" gatewayBoxId="04"/>
+    <mantle.shipment.ShipmentBoxType shipmentBoxTypeId="UPS_Tube" description="UPS Tube"
+                                     dimensionUomId="LEN_in" boxLength="38.00" boxWidth="6.00" boxHeight="6.00" gatewayBoxId="03"/>
+    <mantle.shipment.ShipmentBoxType shipmentBoxTypeId="UPS_Package" description="UPS Package"
+                                     dimensionUomId="LEN_in" boxLength="15.00" boxWidth="15.00" boxHeight="6.00" gatewayBoxId="02"/>
+
+    <mantle.shipment.carrier.ShippingGatewayConfig shippingGatewayConfigId="UPS_DEMO"
+                                                   shippingGatewayTypeEnumId="ShGtwyUPS" description="UPS API Demo"
+                                                   getRateServiceName="mantle.UpsServices.get#UpsShippingRate"
+                                                   requestLabelsServiceName="mantle.UpsServices.delete#CreateLabel">
+
+        <methods carrierPartyId="UPS" shipmentMethodEnumId="ShMthNextDay" gatewayServiceCode="01"/>
+        <methods carrierPartyId="UPS" shipmentMethodEnumId="ShMthGround" gatewayServiceCode="03"/>
+
+        <!--  set your ShipEngine API token (test or live) with a record like this  -->
+        <options optionEnumId="SgoUPSUsername" optionValue="upsforhotwax"/>
+        <options optionEnumId="SgoUPSPassword" optionValue="HotWax@!@#$%^"/>
+        <options optionEnumId="SgoUPSShipperNumber" optionValue="7XV955"/>
+        <options optionEnumId="SgoLabelType" optionValue="PDF_4x6"/>
+
+        <!--  use ShippingGatewayBoxType to override default gatewayBoxId on ShipmentBoxType  -->
+        <boxTypes shipmentBoxTypeId="UPS_Box_10kg" gatewayBoxId="UPS_Box_10kg"/>
+
+    </mantle.shipment.carrier.ShippingGatewayConfig>
+
+    <!--  used in mantle.shipment.CarrierServices ShipmentLabels services  -->
+    <moqui.security.UserGroupPreference userGroupId="ALL_USERS" preferenceKey="ValidateAddressGatewayConfigId" preferenceValue="UPS_DEMO"/>
+    <moqui.security.UserGroupPreference userGroupId="ALL_USERS" preferenceKey="DefaultShipmentGatewayConfigId" preferenceValue="UPS_DEMO"/>
+
+    <!--  example per org/vendor settings, used as defaults if not store; note that for screens like EditParty with no store or
+            vendor the Owner Party must be set to use these settings  -->
+    <mantle.party.PartySetting partyId="ORG_ZIZI_RETAIL" partySettingTypeId="ValidateAddressGatewayConfigId" settingValue="UPS_DEMO"/>
+    <mantle.party.PartySetting partyId="ORG_ZIZI_RETAIL" partySettingTypeId="DefaultShipmentGatewayConfigId" settingValue="UPS_DEMO"/>
+
+    <mantle.product.store.ProductStore productStoreId="POPC_DEFAULT">
+<!--        <shipOptions carrierPartyId="UPS" shipmentMethodEnumId="ShMthNextDay" />-->
+        <shipOptions carrierPartyId="UPS" shipmentMethodEnumId="ShMthGround" />
+    </mantle.product.store.ProductStore>
+
 </entity-facade-xml>
