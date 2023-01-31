@@ -26,9 +26,9 @@
         <methods carrierPartyId="UPS" shipmentMethodEnumId="ShMthGround" gatewayServiceCode="03"/>
 
         <!--  set your ShipEngine API token (test or live) with a record like this  -->
-        <options optionEnumId="SgoUPSUsername" optionValue="upsforhotwax"/>
-        <options optionEnumId="SgoUPSPassword" optionValue="HotWax@!@#$%^"/>
-        <options optionEnumId="SgoUPSShipperNumber" optionValue="7XV955"/>
+        <options optionEnumId="SgoUPSUsername" optionValue=""/>
+        <options optionEnumId="SgoUPSPassword" optionValue=""/>
+        <options optionEnumId="SgoUPSShipperNumber" optionValue=""/>
         <options optionEnumId="SgoLabelType" optionValue="PDF_4x6"/>
 
         <!--  use ShippingGatewayBoxType to override default gatewayBoxId on ShipmentBoxType  -->

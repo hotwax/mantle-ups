@@ -77,20 +77,20 @@
             <!--  ==============  Shipper and ShipFrom  ==============  -->
 
             <if condition="originPostalContactMechId"><then>
-                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="addressFrom">
+                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="originAddress">
                     <field-map field-name="contactMechId" from="routeSegment.originPostalContactMechId"/>
                 </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="stateFrom">
-                    <field-map field-name="geoId" from="addressFrom.stateProvinceGeoId"/>
+                <entity-find-one entity-name="moqui.basic.Geo" value-field="originState">
+                    <field-map field-name="geoId" from="originAddress.stateProvinceGeoId"/>
                 </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="countryFrom">
-                    <field-map field-name="geoId" from="addressFrom.countryGeoId"/>
+                <entity-find-one entity-name="moqui.basic.Geo" value-field="originCountry">
+                    <field-map field-name="geoId" from="originAddress.countryGeoId"/>
                 </entity-find-one>
-<!--                        <log level="info" message="=================${addressFrom}==================="/>-->
-                <set field="Address" from="[AddressLine:addressFrom.address1,City:addressFrom.city, StateProvinceCode:stateFrom.geoCodeAlpha2, PostalCode:addressFrom.postalCode, CountryCode:countryFrom.geoCodeAlpha2]"/>
-                <set field="Shipper" from="[Name:addressFrom.toName,Address:Address]"/>
-                <set field="Address" from="[AddressLine:addressFrom.address1,City:addressFrom.city, StateProvinceCode:stateFrom.geoCodeAlpha2, PostalCode:addressFrom.postalCode,CountryCode:countryFrom.geoCodeAlpha2]"/>
-                <set field="ShipFrom" from="[Name:addressFrom.toName,Address:Address]"/>
+<!--                        <log level="info" message="=================${originAddress}==================="/>-->
+                <set field="Address" from="[AddressLine:originAddress.address1,City:originAddress.city, StateProvinceCode:originState.geoCodeAlpha2, PostalCode:originAddress.postalCode, CountryCode:originCountry.geoCodeAlpha2]"/>
+                <set field="Shipper" from="[Name:originAddress.toName,Address:Address]"/>
+                <set field="Address" from="[AddressLine:originAddress.address1,City:originAddress.city, StateProvinceCode:originState.geoCodeAlpha2, PostalCode:originAddress.postalCode,CountryCode:originCountry.geoCodeAlpha2]"/>
+                <set field="ShipFrom" from="[Name:originAddress.toName,Address:Address]"/>
             </then><else>
                 <message error="true">No origin address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}</message>
             </else></if>
@@ -99,18 +99,18 @@
             <!--  ==============  Address_to  ==============  -->
 
             <if condition="destPostalContactMechId"><then>
-                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="addressTo">
+                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="destAddress">
                     <field-map field-name="contactMechId" from="routeSegment.destPostalContactMechId"/>
                 </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="stateTo">
-                    <field-map field-name="geoId" from="addressTo.stateProvinceGeoId"/>
+                <entity-find-one entity-name="moqui.basic.Geo" value-field="destState">
+                    <field-map field-name="geoId" from="destAddress.stateProvinceGeoId"/>
                 </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="countryTo">
-                    <field-map field-name="geoId" from="addressTo.countryGeoId"/>
+                <entity-find-one entity-name="moqui.basic.Geo" value-field="destCountry">
+                    <field-map field-name="geoId" from="destAddress.countryGeoId"/>
                 </entity-find-one>
-<!--                         <log level="info" message="=================${addressTo}==================="/>-->
-                <set field="Address" from="[AddressLine:addressTo.address1,City:addressTo.city, StateProvinceCode:stateTo.geoCodeAlpha2, PostalCode:addressTo.postalCode,CountryCode:countryTo.geoCodeAlpha2]"/>
-                <set field="ShipTo" from="[Name:addressTo.toName,Address:Address]"/>
+<!--                         <log level="info" message="=================${destAddress}==================="/>-->
+                <set field="Address" from="[AddressLine:destAddress.address1,City:destAddress.city, StateProvinceCode:destState.geoCodeAlpha2, PostalCode:destAddress.postalCode,CountryCode:destCountry.geoCodeAlpha2]"/>
+                <set field="ShipTo" from="[Name:destAddress.toName,Address:Address]"/>
             </then><else>
                 <message error="true">No destination address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}</message>
             </else></if>
@@ -118,18 +118,18 @@
 
             <!--  ==============  Weight  ==============  -->
 
-            <entity-find-one entity-name="mantle.shipment.ShipmentPackage" value-field="weightFrom">
+            <entity-find-one entity-name="mantle.shipment.ShipmentPackage" value-field="shipmentPackage">
                 <field-map field-name="shipmentId"/>
                 <field-map field-name="shipmentPackageSeqId"/>
             </entity-find-one>
-            <if condition="!weightFrom.weightUomId"><log level="warn" message="This shipmentId ===${shipmentId}=== has no Shipment package, not getting rates"/><return/></if>
-            <set field="weight" from="weightFrom.weight" type="String"/>
-            <entity-find-one entity-name="mantle.shipment.ShipmentBoxType" value-field="box">
-                <field-map field-name="shipmentBoxTypeId" from="weightFrom.shipmentBoxTypeId"/>
+            <if condition="!shipmentPackage.weightUomId"><log level="warn" message="This shipmentId ===${shipmentId}=== has no Shipment package, not getting rates"/><return/></if>
+            <set field="weight" from="shipmentPackage.weight" type="String"/>
+            <entity-find-one entity-name="mantle.shipment.ShipmentBoxType" value-field="shipmentBoxType">
+                <field-map field-name="shipmentBoxTypeId" from="shipmentPackage.shipmentBoxTypeId"/>
             </entity-find-one>
-            <set field="length" from="box.boxLength" type="String"/>
-            <set field="width" from="box.boxWidth" type="String"/>
-            <set field="height" from="box.boxHeight" type="String"/>
+            <set field="length" from="shipmentBoxType.boxLength" type="String"/>
+            <set field="width" from="shipmentBoxType.boxWidth" type="String"/>
+            <set field="height" from="shipmentBoxType.boxHeight" type="String"/>
 
 
             <!--  ==============  Carrier_Id  ==============  -->
@@ -150,7 +150,7 @@
             <set field="Service" from="[Code:carrierIds]"/>
             <set field="UnitOfMeasurement" from="[Code:'LBS']"/>
             <set field="ShipmentTotalWeight" from="[UnitOfMeasurement:UnitOfMeasurement,Weight:weight]"/>
-            <set field="PackagingType" from="[Code:box.gatewayBoxId]"/>
+            <set field="PackagingType" from="[Code:shipmentBoxType.gatewayBoxId]"/>
             <set field="UnitOfMeasurement" from="[Code:'IN']"/>
             <set field="Dimensions" from="[UnitOfMeasurement:UnitOfMeasurement, Length:length,Width:width, Height:height]"/>
             <set field="UnitOfMeasurement" from="[Code:'LBS']"/>
@@ -166,7 +166,7 @@
                 <![CDATA[
                     org.moqui.util.RestClient restClient = ec.service.rest().method(org.moqui.util.RestClient.POST)
                             .addHeader("Content-Type", "application/json").jsonObject(requestMap)
-                            .addHeader("AccessLicenseNumber", "BDC7930812CA5BD0")
+                            .addHeader("AccessLicenseNumber", "")
                             .addHeader("Username", "${apiUsername}")
                             .addHeader("Password", "${apiPassword}")
                     restClient.uri().protocol("https").host("onlinetools.ups.com").port(443).path("ship/v1/rating/Rate").build()
@@ -257,20 +257,20 @@
             <!--  ==============  Shipper and ShipFrom  ==============  -->
 
             <if condition="originPostalContactMechId"><then>
-                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="addressFrom">
+                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="originAddress">
                     <field-map field-name="contactMechId" from="routeSegment.originPostalContactMechId"/>
                 </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="stateFrom">
-                    <field-map field-name="geoId" from="addressFrom.stateProvinceGeoId"/>
+                <entity-find-one entity-name="moqui.basic.Geo" value-field="originState">
+                    <field-map field-name="geoId" from="originAddress.stateProvinceGeoId"/>
                 </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="countryFrom">
-                    <field-map field-name="geoId" from="addressFrom.countryGeoId"/>
+                <entity-find-one entity-name="moqui.basic.Geo" value-field="originCountry">
+                    <field-map field-name="geoId" from="originAddress.countryGeoId"/>
                 </entity-find-one>
-<!--                        <log level="info" message="=================${addressFrom}==================="/>-->
-                <set field="Address" from="[AddressLine:addressFrom.address1,City:addressFrom.city, StateProvinceCode:stateFrom.geoCodeAlpha2, PostalCode:addressFrom.postalCode, CountryCode:countryFrom.geoCodeAlpha2]"/>
-                <set field="Shipper" from="[Name:addressFrom.toName,ShipperNumber:ShipperNumber,Address:Address]"/>
-                <set field="Address" from="[AddressLine:addressFrom.address1,City:addressFrom.city, StateProvinceCode:stateFrom.geoCodeAlpha2, PostalCode:addressFrom.postalCode,CountryCode:countryFrom.geoCodeAlpha2]"/>
-                <set field="ShipFrom" from="[Name:addressFrom.toName,Address:Address]"/>
+<!--                        <log level="info" message="=================${originAddress}==================="/>-->
+                <set field="Address" from="[AddressLine:originAddress.address1,City:originAddress.city, StateProvinceCode:originState.geoCodeAlpha2, PostalCode:originAddress.postalCode, CountryCode:originCountry.geoCodeAlpha2]"/>
+                <set field="Shipper" from="[Name:originAddress.toName,ShipperNumber:ShipperNumber,Address:Address]"/>
+                <set field="Address" from="[AddressLine:originAddress.address1,City:originAddress.city, StateProvinceCode:originState.geoCodeAlpha2, PostalCode:originAddress.postalCode,CountryCode:originCountry.geoCodeAlpha2]"/>
+                <set field="ShipFrom" from="[Name:originAddress.toName,Address:Address]"/>
             </then><else>
                 <message error="true">No origin address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}</message>
             </else></if>
@@ -279,18 +279,18 @@
             <!--  ==============  Address_To  ==============  -->
 
             <if condition="destPostalContactMechId"><then>
-                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="addressTo">
+                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="destAddress">
                     <field-map field-name="contactMechId" from="routeSegment.destPostalContactMechId"/>
                 </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="stateTo">
-                    <field-map field-name="geoId" from="addressTo.stateProvinceGeoId"/>
+                <entity-find-one entity-name="moqui.basic.Geo" value-field="destState">
+                    <field-map field-name="geoId" from="destAddress.stateProvinceGeoId"/>
                 </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="countryTo">
-                    <field-map field-name="geoId" from="addressFrom.countryGeoId"/>
+                <entity-find-one entity-name="moqui.basic.Geo" value-field="destCountry">
+                    <field-map field-name="geoId" from="originAddress.countryGeoId"/>
                 </entity-find-one>
-<!--                         <log level="info" message="=================${addressTo}==================="/>-->
-                <set field="Address" from="[AddressLine:addressTo.address1,City:addressTo.city, StateProvinceCode:stateTo.geoCodeAlpha2, PostalCode:addressTo.postalCode,CountryCode:countryTo.geoCodeAlpha2]"/>
-                <set field="ShipTo" from="[Name:addressTo.toName,Address:Address]"/>
+<!--                         <log level="info" message="=================${destAddress}==================="/>-->
+                <set field="Address" from="[AddressLine:destAddress.address1,City:destAddress.city, StateProvinceCode:destState.geoCodeAlpha2, PostalCode:destAddress.postalCode,CountryCode:destCountry.geoCodeAlpha2]"/>
+                <set field="ShipTo" from="[Name:destAddress.toName,Address:Address]"/>
             </then><else>
                 <message error="true">No destination address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}</message>
             </else></if>
@@ -298,14 +298,14 @@
 
             <!--  ==============  Weight  ==============  -->
 
-            <entity-find-one entity-name="mantle.shipment.ShipmentPackage" value-field="weightFrom">
+            <entity-find-one entity-name="mantle.shipment.ShipmentPackage" value-field="shipmentPackage">
                 <field-map field-name="shipmentId"/>
                 <field-map field-name="shipmentPackageSeqId"/>
             </entity-find-one>
-            <if condition="!weightFrom.weightUomId"><log level="warn" message="This shipmentId ===${shipmentId}=== has no Shipment package, not getting rates"/><return/></if>
-            <set field="weight" from="weightFrom.weight" type="String"/>
-            <entity-find-one entity-name="mantle.shipment.ShipmentBoxType" value-field="box">
-                <field-map field-name="shipmentBoxTypeId" from="weightFrom.shipmentBoxTypeId"/>
+            <if condition="!shipmentPackage.weightUomId"><log level="warn" message="This shipmentId ===${shipmentId}=== has no Shipment package, not getting rates"/><return/></if>
+            <set field="weight" from="shipmentPackage.weight" type="String"/>
+            <entity-find-one entity-name="mantle.shipment.ShipmentBoxType" value-field="shipmentBoxType">
+                <field-map field-name="shipmentBoxTypeId" from="shipmentPackage.shipmentBoxTypeId"/>
             </entity-find-one>
 
 
@@ -326,7 +326,7 @@
 
             <set field="Service" from="[Code:carrierIds]"/>
             <set field="UnitOfMeasurement" from="[Code:'LBS']"/>
-            <set field="Packaging" from="[Code:box.gatewayBoxId]"/>
+            <set field="Packaging" from="[Code:shipmentBoxType.gatewayBoxId]"/>
             <set field="UnitOfMeasurement" from="[Code:'LBS']"/>
             <set field="PackageWeight" from="[UnitOfMeasurement:UnitOfMeasurement,Weight:weight]"/>
             <set field="Packages" from="[Packaging:Packaging, PackageWeight:PackageWeight]"/>
@@ -345,7 +345,7 @@
                 <![CDATA[
                     org.moqui.util.RestClient restClient = ec.service.rest().method(org.moqui.util.RestClient.POST)
                             .addHeader("Content-Type", "application/json").jsonObject(requestMap)
-                            .addHeader("AccessLicenseNumber", "BDC7930812CA5BD0")
+                            .addHeader("AccessLicenseNumber", "")
                             .addHeader("Username", "${apiUsername}")
                             .addHeader("Password", "${apiPassword}")
                             .addHeader("transactionSrc", "testing")
@@ -444,7 +444,7 @@
                 <![CDATA[
                     org.moqui.util.RestClient restClient = ec.service.rest().method(org.moqui.util.RestClient.DELETE)
                     .addHeader("Content-Type", "application/json").jsonObject(requestMap)
-                    .addHeader("AccessLicenseNumber", "BDC7930812CA5BD0")
+                    .addHeader("AccessLicenseNumber", "")
                     .addHeader("Username", "${apiUsername}")
                     .addHeader("Password", "${apiPassword}")
                     restClient.uri().protocol("https").host("onlinetools.ups.com").port(443).path("ship/v1/shipments/cancel/${labelId}").build()
