@@ -7,6 +7,7 @@ To use simply:
 
 Load the setup data in data/UpsSetupData.xml
 Load the demo configuration data in data/UpsZaaDemoData.xml or create your own configuration and load it; if you use the demo data, add your API credentials (SgoUPSUsername, SgoUPSPassword and SgoUPSShipperNumber).
+
 ~ get#ShippingRates service: API path: https://onlinetools.ups.com/api/rating/{version}/{requestoption} The Rating API will return a rate given a destination location and parcel attributes. At minimum, a Rating API requires a Shipper and ShipTo information. However, different couriers and delivery methods can require additional fields to satisfy their requirements.
 
 ~ post#CreateLabel service : API path: https://onlinetools.ups.com/api/shipments/{version}/ship The label API will return a URL to a label for an order. Retrieves labelling information for an Order using the tracking number. The labelling information for an Order can only be retrieved once the Order has been processed and allocated a courier, which may take some time after the Order has been placed.
