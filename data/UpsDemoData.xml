@@ -31,22 +31,17 @@
         <options optionEnumId="SgoUPSShipperNumber" optionValue=""/>
         <options optionEnumId="SgoLabelType" optionValue="PDF_4x6"/>
 
-        <!--  use ShippingGatewayBoxType to override default gatewayBoxId on ShipmentBoxType  -->
-        <boxTypes shipmentBoxTypeId="UPS_Box_10kg" gatewayBoxId="UPS_Box_10kg"/>
-
     </mantle.shipment.carrier.ShippingGatewayConfig>
 
     <!--  used in mantle.shipment.CarrierServices ShipmentLabels services  -->
-    <moqui.security.UserGroupPreference userGroupId="ALL_USERS" preferenceKey="ValidateAddressGatewayConfigId" preferenceValue="UPS_DEMO"/>
     <moqui.security.UserGroupPreference userGroupId="ALL_USERS" preferenceKey="DefaultShipmentGatewayConfigId" preferenceValue="UPS_DEMO"/>
 
     <!--  example per org/vendor settings, used as defaults if not store; note that for screens like EditParty with no store or
             vendor the Owner Party must be set to use these settings  -->
-    <mantle.party.PartySetting partyId="ORG_ZIZI_RETAIL" partySettingTypeId="ValidateAddressGatewayConfigId" settingValue="UPS_DEMO"/>
     <mantle.party.PartySetting partyId="ORG_ZIZI_RETAIL" partySettingTypeId="DefaultShipmentGatewayConfigId" settingValue="UPS_DEMO"/>
 
     <mantle.product.store.ProductStore productStoreId="POPC_DEFAULT">
-<!--        <shipOptions carrierPartyId="UPS" shipmentMethodEnumId="ShMthNextDay" />-->
+        <shipOptions carrierPartyId="UPS" shipmentMethodEnumId="ShMthNextDay" />
         <shipOptions carrierPartyId="UPS" shipmentMethodEnumId="ShMthGround" />
     </mantle.product.store.ProductStore>
 
