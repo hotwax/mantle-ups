@@ -11,7 +11,7 @@ Load the demo configuration data in data/UpsZaaDemoData.xml or create your own c
 ~ get#ShippingRates service: 
 This Rate API will return a rate as per the destination location and parcel attributes. At minimum, a Rating API requires a Shipper and ShipTo information. However, different couriers and delivery methods can require additional fields to satisfy their requirements.
 
-~ post#ShippingLabel service : 
+~ create#ShippingLabel service : 
 This label API will return a URL to a label for an order. Retrieves labelling information for an Order using the tracking number.
 
 ~ void#ShippingLabel service: 
