@@ -11,8 +11,8 @@ Load the demo configuration data in data/UpsZaaDemoData.xml or create your own c
 ~ get#ShippingRates service: 
 This Rate API will return a rate as per the destination location and parcel attributes. At minimum, a Rating API requires a Shipper and ShipTo information. However, different couriers and delivery methods can require additional fields to satisfy their requirements.
 
-~ post#CreateLabel service : 
+~ post#ShippingLabel service : 
 This label API will return a URL to a label for an order. Retrieves labelling information for an Order using the tracking number.
 
-~ void#VoidLabel service: 
+~ void#ShippingLabel service: 
 The Void Shipping API is used to cancel the previously scheduled shipment. The API first checks if the Shipment can be cancelled, ie., if its current state allows it, then returns an immediate response. If the Shipment is successfully cancelled, the API will answer with the Shipment with its state updated as cancelled.

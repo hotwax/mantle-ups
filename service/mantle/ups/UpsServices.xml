@@ -179,7 +179,7 @@
     <!-- ========== Create Label Service ============= -->
     <!-- ============================================= -->
 
-    <service verb="post" noun="CreateLabel">
+    <service verb="post" noun="ShippingLabel">
         <implements service="mantle.shipment.CarrierServices.request#ShippingLabels"/>
         <out-parameters>
             <parameter name="responseMap"/>
@@ -380,7 +380,7 @@
     <!-- ========== Void Label Service =============== -->
     <!-- ============================================= -->
 
-    <service verb="delete" noun="VoidLabel" >
+    <service verb="delete" noun="ShippingLabel" >
         <in-parameters>
             <parameter name="shipmentId" required="true"/>
             <parameter name="shipmentRouteSegmentSeqId" required="true"/>
