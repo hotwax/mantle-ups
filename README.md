@@ -15,4 +15,4 @@ This service will return rates as per the destination location and parcel attrib
 This service will return a URL to a label and tracking number for a shipment.
 
 ~ void#ShippingLabel service: 
-The aervice will cancel the previously scheduled shipment. The API first checks if the shipment can be cancelled, ie., if its current state allows it, then returns an immediate response. If the shipment is successfully cancelled, the API will answer with the shipment with its state updated as cancelled.
+The service will cancel the previously scheduled shipment. The API first checks if the shipment can be cancelled, ie., if its current state allows it, then returns an immediate response. If the shipment is successfully cancelled, the API will answer with the shipment with its state updated as cancelled.
