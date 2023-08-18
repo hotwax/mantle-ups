@@ -380,7 +380,7 @@
     <!-- ========== Void Label Service =============== -->
     <!-- ============================================= -->
 
-    <service verb="delete" noun="ShippingLabel" >
+    <service verb="void" noun="ShippingLabel" >
         <in-parameters>
             <parameter name="shipmentId" required="true"/>
             <parameter name="shipmentRouteSegmentSeqId" required="true"/>
