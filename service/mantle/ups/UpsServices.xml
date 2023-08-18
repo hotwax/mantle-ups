@@ -43,74 +43,70 @@
             <if condition="routeSegment == null">
                 <return error="true" message="Shipment Route Segment not found with ID ${shipmentId}:${shipmentRouteSegmentSeqId}"/>
             </if>
-
-            <set field="originPostalContactMechId" from="routeSegment.originPostalContactMechId"/>
-            <set field="destPostalContactMechId" from="routeSegment.destPostalContactMechId"/>\
-
-            <if condition="!originPostalContactMechId &amp;&amp; routeSegment.originFacilityId">
-                <service-call name="mantle.facility.ContactServices.get#FacilityDefaultShipOrigin" out-map="facOriginOut"
-                              in-map="[facilityId:routeSegment.originFacilityId]"/>
-                <if condition="facOriginOut.postalContactMechId">
-                    <set field="originPostalContactMechId" from="facOriginOut.postalContactMechId"/>
-                    <set field="routeSegment.originPostalContactMechId" from="originPostalContactMechId"/>
-                    <entity-update value-field="routeSegment"/>
-                </if>
-            </if>
             <if condition="!routeSegment.carrierPartyId">
                 <return error="true" message="This ShipmentID ${shipmentId} has no carrierPartyId, not getting rates"/>
             </if>
 
+            <set field="originPostalContactMechId" from="routeSegment.originPostalContactMechId"/>
+
+            <if condition="!originPostalContactMechId &amp;&amp; routeSegment.originFacilityId">
+                <service-call name="mantle.facility.ContactServices.get#FacilityDefaultShipOrigin" out-map="facOriginOut" in-map="[facilityId:routeSegment.originFacilityId]"/>
+                <if condition="facOriginOut.postalContactMechId">
+                    <set field="originPostalContactMechId" from="facOriginOut.postalContactMechId"/>
+                </if>
+            </if>
+            <if condition="!originPostalContactMechId">
+                <return error="true" message="originPostalContactMechId not set on shipment ${shipmentId}:${shipmentRouteSegmentSeqId}"/>
+            </if>
+
+
             <!--  ==============  Shipper and ShipFrom  ==============  -->
 
-            <if condition="originPostalContactMechId"><then>
-                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="originAddress">
-                    <field-map field-name="contactMechId" from="routeSegment.originPostalContactMechId"/>
-                </entity-find-one>
-                <if condition="!originAddress">
-                    <return error="true" message="This contactMechId ${contactMechId} has no origin address, not getting rates"/>
-                </if>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="originState">
-                    <field-map field-name="geoId" from="originAddress.stateProvinceGeoId"/>
-                </entity-find-one>
-                <if condition="!originState">
-                    <return error="true" message="This adrress does not have State Province Id value, not getting rates"/>
-                </if>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="originCountry">
-                    <field-map field-name="geoId" from="originAddress.countryGeoId"/>
-                </entity-find-one>
-                <if condition="!originCountry">
-                    <return error="true" message="This adrress does not have Country Geo Id value, not getting rates"/>
-                </if>
-                <set field="Shipper" from="[Name:originAddress.toName,Address:[AddressLine:originAddress.address1,
+            <if condition="!originPostalContactMechId">
+                <return error="true" message="No origin address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}"/>
+            </if>
+            <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="originAddress">
+                <field-map field-name="contactMechId" from="originPostalContactMechId"/>
+            </entity-find-one>
+            <if condition="!originAddress">
+                <return error="true" message="This contactMechId ${contactMechId} has no origin address, not getting rates"/>
+            </if>
+            <entity-find-one entity-name="moqui.basic.Geo" value-field="originState">
+                <field-map field-name="geoId" from="originAddress.stateProvinceGeoId"/>
+            </entity-find-one>
+            <if condition="!originState">
+                <return error="true" message="This adrress does not have State Province Id value, not getting rates"/>
+            </if>
+            <entity-find-one entity-name="moqui.basic.Geo" value-field="originCountry">
+                <field-map field-name="geoId" from="originAddress.countryGeoId"/>
+            </entity-find-one>
+            <if condition="!originCountry">
+                <return error="true" message="This adrress does not have Country Geo Id value, not getting rates"/>
+            </if>
+            <set field="Shipper" from="[Name:originAddress.toName,Address:[AddressLine:originAddress.address1,
                             City:originAddress.city, StateProvinceCode:originState.geoCodeAlpha2, PostalCode:originAddress.postalCode,
                             CountryCode:originCountry.geoCodeAlpha2]]"/>
-                <set field="ShipFrom" from="[Name:originAddress.toName,Address:[AddressLine:originAddress.address1,
+            <set field="ShipFrom" from="[Name:originAddress.toName,Address:[AddressLine:originAddress.address1,
                             City:originAddress.city, StateProvinceCode:originState.geoCodeAlpha2, PostalCode:originAddress.postalCode,
                             CountryCode:originCountry.geoCodeAlpha2]]"/>
-            </then><else>
-                <message error="true">No origin address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}</message>
-            </else></if>
-
 
             <!--  ==============  Address_to  ==============  -->
 
-            <if condition="destPostalContactMechId"><then>
-                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="destAddress">
-                    <field-map field-name="contactMechId" from="routeSegment.destPostalContactMechId"/>
-                </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="destState">
-                    <field-map field-name="geoId" from="destAddress.stateProvinceGeoId"/>
-                </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="destCountry">
-                    <field-map field-name="geoId" from="destAddress.countryGeoId"/>
-                </entity-find-one>
-                <set field="ShipTo" from="[Name:destAddress.toName,Address:[AddressLine:destAddress.address1,
+            <if condition="!routeSegment.destPostalContactMechId">
+                <return error="true" message="No destination address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}"/>
+            </if>
+            <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="destAddress">
+                <field-map field-name="contactMechId" from="routeSegment.destPostalContactMechId"/>
+            </entity-find-one>
+            <entity-find-one entity-name="moqui.basic.Geo" value-field="destState">
+                <field-map field-name="geoId" from="destAddress.stateProvinceGeoId"/>
+            </entity-find-one>
+            <entity-find-one entity-name="moqui.basic.Geo" value-field="destCountry">
+                <field-map field-name="geoId" from="destAddress.countryGeoId"/>
+            </entity-find-one>
+            <set field="ShipTo" from="[Name:destAddress.toName,Address:[AddressLine:destAddress.address1,
                             City:destAddress.city, StateProvinceCode:destState.geoCodeAlpha2, PostalCode:destAddress.postalCode,
                             CountryCode:destCountry.geoCodeAlpha2]]"/>
-            </then><else>
-                <message error="true">No destination address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}</message>
-            </else></if>
-
 
             <!--  ==============  Weight  ==============  -->
 
@@ -179,7 +175,7 @@
     <!-- ========== Create Label Service ============= -->
     <!-- ============================================= -->
 
-    <service verb="post" noun="ShippingLabel">
+    <service verb="create" noun="ShippingLabel">
         <implements service="mantle.shipment.CarrierServices.request#ShippingLabels"/>
         <out-parameters>
             <parameter name="responseMap"/>
@@ -224,75 +220,75 @@
             <if condition="routeSegment == null">
                 <return error="true" message="Shipment Route Segment not found with ID ${shipmentId}:${shipmentRouteSegmentSeqId}"/>
             </if>
-
-            <set field="originPostalContactMechId" from="routeSegment.originPostalContactMechId"/>
-            <set field="destPostalContactMechId" from="routeSegment.destPostalContactMechId"/>\
-
-            <if condition="!originPostalContactMechId &amp;&amp; routeSegment.originFacilityId">
-                <service-call name="mantle.facility.ContactServices.get#FacilityDefaultShipOrigin" out-map="facOriginOut"
-                              in-map="[facilityId:routeSegment.originFacilityId]"/>
-                <if condition="facOriginOut.postalContactMechId">
-                    <set field="originPostalContactMechId" from="facOriginOut.postalContactMechId"/>
-                    <set field="routeSegment.originPostalContactMechId" from="originPostalContactMechId"/>
-                    <entity-update value-field="routeSegment"/>
-                </if>
-            </if>
             <if condition="!routeSegment.carrierPartyId">
                 <return error="true" message="This ShipmentID ${shipmentId} has no carrierPartyId, not getting rates"/>
             </if>
 
+            <set field="originPostalContactMechId" from="routeSegment.originPostalContactMechId"/>
+            <if condition="!originPostalContactMechId &amp;&amp; routeSegment.originFacilityId">
+                <service-call name="mantle.facility.ContactServices.get#FacilityDefaultShipOrigin" out-map="facOriginOut" in-map="[facilityId:routeSegment.originFacilityId]"/>
+                <if condition="facOriginOut.postalContactMechId">
+                    <set field="originPostalContactMechId" from="facOriginOut.postalContactMechId"/>
+                </if>
+            </if>
+            <if condition="!originPostalContactMechId">
+                <return error="true" message="originPostalContactMechId not set on shipment ${shipmentId}:${shipmentRouteSegmentSeqId}"/>
+            </if>
+
+
             <!--  ==============  Shipper and ShipFrom  ==============  -->
 
-            <if condition="originPostalContactMechId"><then>
-                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="originAddress">
-                    <field-map field-name="contactMechId" from="routeSegment.originPostalContactMechId"/>
-                </entity-find-one>
-                <if condition="!originAddress">
-                    <return error="true" message="This contactMechId ${contactMechId} has no origin address, not getting label"/>
-                </if>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="originState">
-                    <field-map field-name="geoId" from="originAddress.stateProvinceGeoId"/>
-                </entity-find-one>
-                <if condition="!originState">
-                    <return error="true" message="This adrress does not have State Province Id value, not getting label"/>
-                </if>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="originCountry">
-                    <field-map field-name="geoId" from="originAddress.countryGeoId"/>
-                </entity-find-one>
-                <if condition="!originCountry">
-                    <return error="true" message="This adrress does not have Country Geo Id value, not getting label"/>
-                </if>
-                <set field="Shipper" from="[Name:originAddress.toName,ShipperNumber:ShipperNumber,
+            <if condition="!originPostalContactMechId">
+                <return error="true" message="No origin address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}"/>
+            </if>
+            <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="originAddress">
+                <field-map field-name="contactMechId" from="originPostalContactMechId"/>
+            </entity-find-one>
+            <if condition="!originAddress">
+                <return error="true" message="This contactMechId ${contactMechId} has no origin address, not getting label"/>
+            </if>
+            <entity-find-one entity-name="moqui.basic.Geo" value-field="originState">
+                <field-map field-name="geoId" from="originAddress.stateProvinceGeoId"/>
+            </entity-find-one>
+            <if condition="!originState">
+                <return error="true" message="This adrress does not have State Province Id value, not getting label"/>
+            </if>
+            <entity-find-one entity-name="moqui.basic.Geo" value-field="originCountry">
+                <field-map field-name="geoId" from="originAddress.countryGeoId"/>
+            </entity-find-one>
+            <if condition="!originCountry">
+                <return error="true" message="This adrress does not have Country Geo Id value, not getting label"/>
+            </if>
+            <set field="Shipper" from="[Name:originAddress.toName,ShipperNumber:ShipperNumber,
                             Address:[AddressLine:originAddress.address1,City:originAddress.city,
                             StateProvinceCode:originState.geoCodeAlpha2,PostalCode:originAddress.postalCode,
                             CountryCode:originCountry.geoCodeAlpha2]]"/>
-                <set field="ShipFrom" from="[Name:originAddress.toName,Address:[AddressLine:originAddress.address1,
+            <set field="ShipFrom" from="[Name:originAddress.toName,Address:[AddressLine:originAddress.address1,
                             City:originAddress.city, StateProvinceCode:originState.geoCodeAlpha2, PostalCode:originAddress.postalCode,
                             CountryCode:originCountry.geoCodeAlpha2]]"/>
-            </then><else>
-                <message error="true">No origin address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}</message>
-            </else></if>
 
 
             <!--  ==============  Address_To  ==============  -->
 
-            <if condition="destPostalContactMechId"><then>
-                <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="destAddress">
-                    <field-map field-name="contactMechId" from="routeSegment.destPostalContactMechId"/>
-                </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="destState">
-                    <field-map field-name="geoId" from="destAddress.stateProvinceGeoId"/>
-                </entity-find-one>
-                <entity-find-one entity-name="moqui.basic.Geo" value-field="destCountry">
-                    <field-map field-name="geoId" from="originAddress.countryGeoId"/>
-                </entity-find-one>
-                <set field="ShipTo" from="[Name:destAddress.toName,Address:[AddressLine:destAddress.address1,
+            <if condition="!routeSegment.destPostalContactMechId">
+                <return error="true" message="No destination address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}"/>
+            </if>
+
+            <entity-find-one entity-name="mantle.party.contact.PostalAddress" value-field="destAddress">
+                <field-map field-name="contactMechId" from="routeSegment.destPostalContactMechId"/>
+            </entity-find-one>
+            <if condition="!destAddress">
+                <return error="true" message="Recipients Address is not found for shipment ${shipmentId}:${shipmentRouteSegmentSeqId}"/>
+            </if>
+            <entity-find-one entity-name="moqui.basic.Geo" value-field="destState">
+                <field-map field-name="geoId" from="destAddress.stateProvinceGeoId"/>
+            </entity-find-one>
+            <entity-find-one entity-name="moqui.basic.Geo" value-field="destCountry">
+                <field-map field-name="geoId" from="originAddress.countryGeoId"/>
+            </entity-find-one>
+            <set field="ShipTo" from="[Name:destAddress.toName,Address:[AddressLine:destAddress.address1,
                             City:destAddress.city, StateProvinceCode:destState.geoCodeAlpha2, PostalCode:destAddress.postalCode,
                             CountryCode:destCountry.geoCodeAlpha2]]"/>
-            </then><else>
-                <message error="true">No destination address set on Shipment Route Segment ${shipmentId}:${shipmentRouteSegmentSeqId}</message>
-            </else></if>
-
 
             <!--  ==============  Weight  ==============  -->
 
